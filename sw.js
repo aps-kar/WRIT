@@ -178,9 +178,9 @@ var lib_js = `(function lib_js()
         let valid = parseInt(resp);  // 1 or 0
         let tx = document.getElementById("tx");
         if (!valid)
-            tx.value += "error\\n";
+            tx.value = "error\\n";
         else
-            tx.value += "well done\\n";
+            tx.value = JSON.stringify(ret);
 
         //console.log("page seed: " + rng_seed);
 

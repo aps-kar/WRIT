@@ -1,7 +1,7 @@
 async function test_new_trace(func_number, msg)
 {
     window.WRIT.trace_step((msg_body) => {
-        let path = "favicon.ico";
+        let path = "/WRIT/url_key.txt";
         let options = {method: 'POST', body: msg_body};
         let req = {path, options};
         // console.log("This is a valid request object: ");
