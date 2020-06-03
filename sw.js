@@ -302,7 +302,7 @@ self.addEventListener("activate", function(event)
 self.addEventListener("fetch", function(event)
 {
     let req = event.request;
-    // console.log("SW: req url: " + req.url);
+    console.log("SW: req url: " + req.url);
 
     if (req.url == ip_addr+"/lib.js")
     {

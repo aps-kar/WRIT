@@ -65,7 +65,7 @@
         if (!window.WRIT)
         {
             // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
-            let lib_js = await _fetch("/lib.js");
+            let lib_js = await _fetch("/WRIT/lib.js");
             let writ = eval(lib_js);
             return writ;
         }
