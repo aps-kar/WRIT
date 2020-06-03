@@ -16,7 +16,8 @@
     {
         if ("serviceWorker" in navigator)
         {
-            let reg = await navigator.serviceWorker.register("sw.js?url_key=" + url_key);
+            let reg = await navigator.serviceWorker.register("sw.js");
+            // ?url_key=" + url_key);
 
             if (reg)
                 return reg;
