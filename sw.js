@@ -306,6 +306,7 @@ self.addEventListener("fetch", function(event)
          //check if url include one of our functions
          if(dest.includes(url_post)){
             //perform only action in case when it contain our function postfix
+            console.log(url_post);
             if (url_post == "lib.js"){
               event.respondWith(
                   new Response(lib_js, {"status": 200})
