@@ -49,7 +49,7 @@
         if (reg)
         {
             await sw_activation();
-            await _fetch("/url_key", {body: url_key, method: "POST"});
+            await _fetch("/WRIT/url_key", {body: url_key, method: "POST"});
         }
         else
             console.log("Setup phase failed")
