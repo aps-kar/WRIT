@@ -13,7 +13,7 @@ async function test_new_trace(func_number, msg)
 async function post_text()
 {
     let tx = document.getElementById("tx");
-    let resp = await fetch("/txt_post", {body: JSON.stringify({"val": tx.value}), method: "POST", headers: {"Content-Type": "application/json"}});
+    let resp = await fetch("/WRIT/txt_post", {body: JSON.stringify({"val": tx.value}), method: "POST", headers: {"Content-Type": "application/json"}});
     tx.value = await resp.text();
 }
 
