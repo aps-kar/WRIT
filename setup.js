@@ -43,7 +43,8 @@
 
     async function setup() // execute setup phase
     {
-        let url_key = await _fetch("/url_key");
+        let url_key = '123';
+         // await _fetch("/url_key");
         let reg = await register_sw(url_key);
         if (reg)
         {
