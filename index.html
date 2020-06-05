@@ -1,5 +1,6 @@
 <html>
     <head>
+      <scriot src="lib.js"></script>
         <link rel="stylesheet" href="style.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.3/seedrandom.min.js"></script>
         <script src="axios.js"></script>
@@ -7,14 +8,14 @@
         <script src="init.js"></script>
     </head>
     <body>
-        <button id="test_new_trace" onclick='test_new_trace(document.getElementById("tx2").value,document.getElementById("tx").value)'>test new trace</button>
+        <button id="test_new_trace" onclick='test_new_trace()'>test new trace</button>
         <!-- <button id="init" onclick="lib_obj.setup();">setup sw</button> -->
         <button id="unreg" onclick="WRIT.unregister();">unregister sw</button>
         <button id="test_ww" onclick="ww();">test web worker</button>
         <!-- <button onclick="WRIT.end2end();">end to end</button> -->
         <button onclick="WRIT.timed_test();">vanilla vs protected time test</button>
         <br><br>Put your text here:<br>
-        <textarea id="tx" rows="20" cols="40"></textarea>
+        <textarea id="tx" rows="15" cols="25"></textarea>
         <br>
         <br>Number of functions:<br>
         <textarea id="tx2" rows="1" cols="5"></textarea>
@@ -33,9 +34,7 @@
                   sleep(2000 * x ).then(() => {
 
                           document.getElementById("tx").value = msg;
-                          test_new_trace(document.getElementById("tx2").value, document.getElementById("tx").value);
-
-                          //WRIT.trace_step(document.getElementById("tx2").value,post_text);
+                          WRIT.trace_step(document.getElementById("tx2").value,post_text);
                           //post_text();
                   })
 
