@@ -44,7 +44,7 @@
     async function setup() // execute setup phase
     {
         // let url_key = await _fetch("/WRIT/url_key");
-        let reg = await register_sw('a'); // url_key);
+        let reg = await register_sw(); // url_key);
         if (reg)
         {
             await sw_activation();
