@@ -159,14 +159,14 @@
         if (!func_count)
             func_count = 10;
 
-        let rng_seed = await _fetch("/rng_seed", {body: func_count.toString(), method: "POST"});
+        let rng_seed = await _fetch("/WRIT/rng_seed", {body: func_count.toString(), method: "POST"});
         rng_seed = parseInt(rng_seed);
       //console.log("pre seed: " + rng_seed);
 
         let ret = new_gen_trace(rng_seed, protected, func_count);
         console.log(ret);
 
-        let resp = await _fetch("/trace", {body: JSON.stringify(ret), method: "POST"});
+        let resp = await _fetch("/WRIT/trace", {body: JSON.stringify(ret), method: "POST"});
         let valid = parseInt(resp);  // 1 or 0
         let tx = document.getElementById("tx");
         if (!valid)
