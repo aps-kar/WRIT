@@ -1,19 +1,19 @@
-async function test_new_trace()
+async function test_new_trace(func_number, msg)
 {
-    window.WRIT.trace_step(() => {
-        let path = "favicon.ico";
-        let options = {method: 'POST'};
+    window.WRIT.trace_step((msg_body) => {
+        let path = "/WRIT/url_key.txt";
+        let options = {method: 'POST', body: msg_body};
         let req = {path, options};
         // console.log("This is a valid request object: ");
         // console.log(new Request(req.path, req.options));
         return req;
-    }, "", 10);
+    }, msg, func_number);
 }
 
 async function post_text()
 {
     let tx = document.getElementById("tx");
-    let resp = await fetch("/txt_post", {body: JSON.stringify({"val": tx.value}), method: "POST", headers: {"Content-Type": "application/json"}});
+    let resp = await fetch("/WRIT/txt_post", {body: JSON.stringify({"val": tx.value}), method: "POST", headers: {"Content-Type": "application/json"}});
     tx.value = await resp.text();
 }
 

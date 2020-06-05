@@ -2,7 +2,8 @@
 //https://github.com/davidbau/seedrandom
 //cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.3/seedrandom.min.js
 !function(a,b){function c(c,j,k){var n=[];j=1==j?{entropy:!0}:j||{};var s=g(f(j.entropy?[c,i(a)]:null==c?h():c,3),n),t=new d(n),u=function(){for(var a=t.g(m),b=p,c=0;a<q;)a=(a+c)*l,b*=l,c=t.g(1);for(;a>=r;)a/=2,b/=2,c>>>=1;return(a+c)/b};return u.int32=function(){return 0|t.g(4)},u.quick=function(){return t.g(4)/4294967296},u.double=u,g(i(t.S),a),(j.pass||k||function(a,c,d,f){return f&&(f.S&&e(f,t),a.state=function(){return e(t,{})}),d?(b[o]=a,c):a})(u,s,"global"in j?j.global:this==b,j.state)}function d(a){var b,c=a.length,d=this,e=0,f=d.i=d.j=0,g=d.S=[];for(c||(a=[c++]);e<l;)g[e]=e++;for(e=0;e<l;e++)g[e]=g[f=s&f+a[e%c]+(b=g[e])],g[f]=b;(d.g=function(a){for(var b,c=0,e=d.i,f=d.j,g=d.S;a--;)b=g[e=s&e+1],c=c*l+g[s&(g[e]=g[f=s&f+b])+(g[f]=b)];return d.i=e,d.j=f,c})(l)}function e(a,b){return b.i=a.i,b.j=a.j,b.S=a.S.slice(),b}function f(a,b){var c,d=[],e=typeof a;if(b&&"object"==e)for(c in a)try{d.push(f(a[c],b-1))}catch(a){}return d.length?d:"string"==e?a:a+"\0"}function g(a,b){for(var c,d=a+"",e=0;e<d.length;)b[s&e]=s&(c^=19*b[s&e])+d.charCodeAt(e++);return i(b)}function h(){try{var b;return j&&(b=j.randomBytes)?b=b(l):(b=new Uint8Array(l),(k.crypto||k.msCrypto).getRandomValues(b)),i(b)}catch(b){var c=k.navigator,d=c&&c.plugins;return[+new Date,k,d,k.screen,i(a)]}}function i(a){return String.fromCharCode.apply(0,a)}var j,k=this,l=256,m=6,n=52,o="random",p=b.pow(l,m),q=b.pow(2,n),r=2*q,s=l-1;if(b["seed"+o]=c,g(b.random(),a),"object"==typeof module&&module.exports){module.exports=c;try{j=require("crypto")}catch(a){}}else"function"==typeof define&&define.amd&&define(function(){return c})}([],Math);
-var ip_addr = "192.168.1.3:5000";
+
+var ip_addr = "https://aps-kar.github.io/WRIT";
 var url_key = -1, sw_trace = "", crypto_key, signature;
 var enc = new TextEncoder(), dec = new TextDecoder(); // utf-8
 var func_count = 0;
@@ -136,8 +137,6 @@ var lib_js = `(function lib_js()
         let ret = funcs[0]();
         ret.numbers = number_array.join("");
 
-        console.log(ret);
-
         return ret;
     }
 
@@ -168,20 +167,20 @@ var lib_js = `(function lib_js()
         if (!func_count)
             func_count = 10;
 
-        let rng_seed = await _fetch("/rng_seed", {body: func_count.toString(), method: "POST"});
+        let rng_seed = await _fetch("/WRIT/rng_seed", {body: func_count.toString(), method: "POST"});
         rng_seed = parseInt(rng_seed);
       //console.log("pre seed: " + rng_seed);
 
         let ret = new_gen_trace(rng_seed, protected, func_count);
         console.log(ret);
 
-        let resp = await _fetch("/trace", {body: JSON.stringify(ret), method: "POST"});
+        let resp = await _fetch("/WRIT/trace", {body: JSON.stringify(ret), method: "POST"});
         let valid = parseInt(resp);  // 1 or 0
         let tx = document.getElementById("tx");
         if (!valid)
-            tx.value += "error\\n";
+            tx.value = "error\\n";
         else
-            tx.value += "well done\\n";
+            tx.value = JSON.stringify(ret);
 
         //console.log("page seed: " + rng_seed);
 
@@ -303,21 +302,21 @@ self.addEventListener("activate", function(event)
 self.addEventListener("fetch", function(event)
 {
     let req = event.request;
-    // console.log("SW: req url: " + req.url);
+    console.log("SW: req url: " + req.url);
 
-    // if (req.url == "http://"+ip_addr+"/lib.js")
-    // {
-    //     event.respondWith(
-    //         new Response(lib_js, {"status": 200})
-    //     );
-    // }
-    if (req.url == "http://"+ip_addr+"/ww.js")
+    if (req.url == ip_addr+"/lib.js")
+    {
+        event.respondWith(
+            new Response(lib_js, {"status": 200})
+        );
+    }
+    else if (req.url == ip_addr+"/ww.js")
     {
         event.respondWith(
             new Response(create_ww(), {"status": 200})
         );
     }
-    else if (req.url == "http://"+ip_addr+"/id")
+    else if (req.url == ip_addr+"/id")
     {
         event.respondWith(req.text().then((id) =>
         {
@@ -327,7 +326,7 @@ self.addEventListener("fetch", function(event)
                 return new Response("failure!", {"status": 400});
         }));
     }
-    else if (req.url == "http://"+ip_addr+"/url_key")
+    else if (req.url == ip_addr+"/url_key")
     {
         if (url_key == -1)
         {
@@ -340,7 +339,7 @@ self.addEventListener("fetch", function(event)
         else
             event.respondWith(new Response("", {"status": 404}));
     }
-    else if (req.url == "http://"+ip_addr+"/rng_seed")
+    else if (req.url == ip_addr+"/rng_seed")
     {
         event.respondWith(req.text()
         .then((_func_count) => func_count = parseInt(_func_count))
@@ -360,7 +359,7 @@ self.addEventListener("fetch", function(event)
             return new Response(rng_seed, {"status": 200});
         }));
     }
-    else if (req.url == "http://"+ip_addr+"/trace")
+    else if (req.url == ip_addr+"/trace")
     {
         let stack_trace = layers = "";
         let ret = request = {};
@@ -397,7 +396,7 @@ self.addEventListener("fetch", function(event)
                     // console.log(package);
 
                     let args = {body: package, method: "POST", headers: {"Content-Type": "application/json"}};
-                    fetch("/sw_post", args);
+                    // fetch("/sw_post", args);
 
                     resolve(valid.toString());
                 })
