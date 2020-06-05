@@ -16,8 +16,7 @@
     {
         if ("serviceWorker" in navigator)
         {
-            let reg = await navigator.serviceWorker.register("sw.js");
-            // ?url_key=" + url_key);
+            let reg = await navigator.serviceWorker.register("sw.js?url_key=" + url_key);
 
             if (reg)
                 return reg;
@@ -43,13 +42,12 @@
 
     async function setup() // execute setup phase
     {
-        let url_key = '123';
-         // await _fetch("/url_key");
+        let url_key = await _fetch("/url_key");
         let reg = await register_sw(url_key);
         if (reg)
         {
             await sw_activation();
-            await _fetch("/WRIT/url_key", {body: url_key, method: "POST"});
+            await _fetch("/url_key", {body: url_key, method: "POST"});
         }
         else
             console.log("Setup phase failed")
@@ -65,12 +63,13 @@
         if (!window.WRIT)
         {
             // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
-            let lib_js = await _fetch("/WRIT/lib.js");
-            let writ = eval(lib_js);
-            return writ;
+            // let lib_js = await _fetch("/lib.js");
+            // let writ = eval(lib_js);
+            // return writ;
+            await fetch("/lib.js");
         }
-        else
-            return window.WRIT;
+        // else
+            // return window.WRIT;
     }
 
     async function axios_integration()
@@ -107,9 +106,11 @@
         else
             await sw_activation();
 
-        return get_lib();
+        // return
+        // await get_lib();
     }
 
-    window.WRIT = await init();
+    await init();
+    // window.WRIT = await init();
     // await axios_integration();
 })();
