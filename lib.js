@@ -1,6 +1,6 @@
 (function lib_js()
 {
-    window.WRIT = {};
+    let _obj = {};
 
     // private methods
     async function _fetch(...args) // custom fetch
