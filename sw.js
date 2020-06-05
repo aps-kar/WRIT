@@ -304,13 +304,14 @@ self.addEventListener("fetch", function(event)
     let req = event.request;
     console.log("SW: req url: " + req.url);
 
-    if (req.url == ip_addr+"/lib.js")
-    {
-        event.respondWith(
-            new Response(lib_js, {"status": 200})
-        );
-    }
-    else if (req.url == ip_addr+"/ww.js")
+    // if (req.url == ip_addr+"/lib.js")
+    // {
+    //     event.respondWith(
+    //         new Response(lib_js, {"status": 200})
+    //     );
+    // }
+    // else
+    if (req.url == ip_addr+"/ww.js")
     {
         event.respondWith(
             new Response(create_ww(), {"status": 200})
