@@ -16,7 +16,8 @@
     {
         if ("serviceWorker" in navigator)
         {
-            let reg = await navigator.serviceWorker.register("sw.js?url_key=" + url_key);
+            let reg = await navigator.serviceWorker.register('sw.js');
+            // ?url_key=" + url_key);
 
             if (reg)
                 return reg;
@@ -42,12 +43,12 @@
 
     async function setup() // execute setup phase
     {
-        let url_key = await _fetch("/url_key");
-        let reg = await register_sw(url_key);
+        // let url_key = await _fetch("/WRIT/url_key");
+        let reg = await register_sw('a'); // url_key);
         if (reg)
         {
             await sw_activation();
-            await _fetch("/url_key", {body: url_key, method: "POST"});
+            // await _fetch("/url_key", {body: url_key, method: "POST"});
         }
         else
             console.log("Setup phase failed")
@@ -66,7 +67,7 @@
             // let lib_js = await _fetch("/lib.js");
             // let writ = eval(lib_js);
             // return writ;
-            await fetch("/lib.js");
+            await fetch("lib.js");
         }
         // else
             // return window.WRIT;
