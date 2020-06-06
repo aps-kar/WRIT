@@ -127,7 +127,7 @@
         let ret = funcs[0]();
         ret.numbers = number_array.join("");
 
-        console.log(ret.trace.original.split("\n"));
+        ret.trace.original.split("\n").forEach(e => console.log(e));
 
         return ret;
     }
