@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css">
+        <script src="seedrandom.js"></script>
+        <script src="axios.js"></script>
+        <script src="setup.js"></script>
+        <script>
+            async function test_writ(e, func_number, msg)
+            {
+                await window.WRIT.trace_step((msg_body) => {
+                    let path = "favicon.ico";
+                    let options = {method: 'POST', body: msg_body};
+                    let req = {path, options};
+                    return req;
+                }, msg, func_number, e);
+            }
+        </script>
+    </head>
+    <body>
+        POST text here:<br>
+        <textarea id="tx" rows="5" cols="20"></textarea><br>
+        <br>Number of functions:<br>
+        <textarea id="tx2" rows="2" cols="5"></textarea><br><br>
+        <button id="test_writ" onclick='
+            test_writ(event, document.getElementById("tx2").value, document.getElementById("tx").value);
+            '>Send POST protected by WRIT
+        </button>
+    </body>
+</html>
