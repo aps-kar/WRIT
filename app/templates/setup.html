@@ -1,0 +1,23 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css">
+        <script src="setup.js"></script>
+    </head>
+    <body>
+        <label>username</label><br>
+        <input id="u" value=""></input><br>
+        <label>password</label><br>
+        <input id="p" value=""></input><br><br>
+        <button onclick='
+            (async () => {
+                let sw = await navigator.serviceWorker.getRegistration();
+                if (!sw || !window.WRIT)
+                    window.WRIT = await init(document.getElementById("u").value,
+                                            document.getElementById("p").value);
+                window.location = "/index";
+            })();
+            '>
+            Log in & set up WRIT
+        </button>
+    </body>
+</html>

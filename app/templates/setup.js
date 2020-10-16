@@ -1,108 +1,140 @@
-(async function setup_js()
+function create_request(num)
 {
-    // private methods
-    async function _fetch(...args) // custom fetch
-    {
-        let response = await fetch(...args); // , {credentials: "same-origin"}
-        if (response.ok)
-        {
-            let txt = await response.text(); // resolve response as text
-            return txt;
+    let text = document.getElementById("tx" + num).value;
+    let config = {method: "POST", body: text};
+    return {path: "/favicon.ico", config};
+}
+
+function get_cookie(cname)
+{
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+    for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
         }
     }
+    return "";
+}
 
-    async function register_sw(id) // fetch SW script and register it
+function del_cookies()
+{
+    var allCookies = document.cookie.split(";");
+    for (var i = 0; i < allCookies.length; i++)
+        document.cookie = allCookies[i] + "=;expires="
+                            + new Date(0).toUTCString();
+}
+
+async function _fetch(...args) // lightly modified fetch
+{
+    let response = await fetch(...args); // , {credentials: "same-origin"}
+    if (response.ok)
     {
-        if ("serviceWorker" in navigator) // if sw supported in browser
-        {
-            // register sw
-            let reg = await navigator.serviceWorker.register("sw.js?id=" + id);
+        let txt = await response.text(); // resolve response as text
+        return txt;
+    }
+}
 
-            if (reg)
-                return reg;
-        }
+async function register_sw(id) // fetch SW script and register it
+{
+    if ("serviceWorker" in navigator) // if sw supported in browser
+    {
+        // register sw
+        let reg = await navigator.serviceWorker.register("sw.js?id=" + id);
 
-        // SW API unsupported in current browser
-        return null;
+        if (reg)
+            return reg;
     }
 
-    function sw_activation() // wait for SW to activate
+    // SW API unsupported in current browser
+    return null;
+}
+
+function sw_activation() // wait for SW to activate
+{
+    return new Promise((resolve, reject) =>
     {
-        return new Promise((resolve, reject) =>
-        {
-            if (navigator.serviceWorker.controller) // if sw activated
-                resolve();
-            else // listen for activation
-                navigator.serviceWorker.oncontrollerchange = (cc) => resolve();
-        });
+        if (navigator.serviceWorker.controller) // if sw activated
+            resolve();
+        else // listen for activation
+            navigator.serviceWorker.oncontrollerchange = (cc) => resolve();
+    });
+}
+
+async function setup(u, p) // execute setup phase
+{
+    let id = await _fetch("/id?u=" + u + "&p=" + p); // get id from server
+    document.cookie = u + "=" + id + ";expires="
+        + new Date().setTime(new Date().getTime() + 365*24*60*60*1000);
+    let reg = await register_sw(id); // register sw with id
+
+    if (reg) // if registration was successful
+    {
+        await sw_activation();  // wait for sw to activate
+        // give id to sw
+        await _fetch("/key?id=" + id);
     }
 
-    async function setup() // execute setup phase
+    // setup phase failed
+    return null;
+}
+
+async function get_sw() // get registered sw for current scope
+{
+    let sw = await navigator.serviceWorker.getRegistration();
+    if (sw && sw.active.state !== "activated")
+        await sw_activation();
+
+    return sw;
+}
+
+async function get_lib()
+{
+    if (!window.WRIT)   // if WRIT isn't installed yet
     {
-        let id = await _fetch("/id"); // get id from server
-        let reg = await register_sw(id); // register sw with id
-        if (reg) // if registration was successful
-        {
-            await sw_activation();  // wait for sw to activate
-            // give id to sw
-            await _fetch("/key?id=" + id);
-        }
+        let lib_string = await _fetch("/lib.js");  // get WRIT's lib from sw
+        let lib_js = eval(lib_string); // eval the string to get JS
 
-        // setup phase failed
-        return null;
+        // alternative that doesn't use eval (we need eval for Safari)
+        // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
+
+        return lib_js;
     }
+    else // if WRIT is installed already, there should be a WRIT property
+        return window.WRIT;
+}
 
-    async function get_sw() // get registered sw for current scope
+// elegant integration with axios, alternative to directly editing source
+// currently unused
+async function axios_integration()
+{
+    // request interceptor
+    window.axios.interceptors.request.use(async function axios_intercept(config)
     {
-        return await navigator.serviceWorker.getRegistration();
-    }
+        let valid = await window.WRIT.trace_step();
+        if (!valid)
+            throw new Error("SW attestation failed");
 
-    async function get_lib()
+        return config;
+    },
+    function (error)
     {
-        if (!window.WRIT)   // if WRIT isn't installed yet
-        {
-            let lib_string = await _fetch("/lib.js");  // get WRIT's lib from sw
-            let lib_js = eval(lib_string); // eval the string to get JS
+        return Promise.reject(error);
+    });
+}
 
-            // alternative that doesn't use eval (we need eval for MacOS)
-            // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
+async function init(u, p) // WRIT initialization
+{
+    let sw = await get_sw(); // get the operating sw if it exists
 
-            return lib_js;
-        }
-        else // if WRIT is installed already, there should be a WRIT property
-            return window.WRIT;
-    }
+    if (!sw) // if it doesn't, install it first
+        await setup(u, p);
 
-    // elegant integration with axios, alternative to directly editing source
-    // currently unused
-    async function axios_integration()
-    {
-        // request interceptor
-        window.axios.interceptors.request.use(async function axios_intercept(config)
-        {
-            let valid = await window.WRIT.trace_step();
-            if (!valid)
-                throw new Error("SW attestation failed");
-
-            return config;
-        },
-        function (error)
-        {
-            return Promise.reject(error);
-        });
-    }
-
-    async function init() // WRIT initialization
-    {
-        let sw = await get_sw(); // get the operating sw if it exists
-        if (!sw) // if it doesn't, install it first
-            await setup();
-        // else
-        //     await sw_activation();
-
-        return get_lib();
-    }
-
-    window.WRIT = await init();
-    // await axios_integration(); // if not directly editing Axios' source
-})();
+    let lib = await get_lib();
+    return lib;
+}

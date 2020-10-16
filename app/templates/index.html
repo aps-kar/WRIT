@@ -4,26 +4,68 @@
         <script src="seedrandom.js"></script>
         <script src="axios.js"></script>
         <script src="setup.js"></script>
-        <script>
-            async function test_writ(e, func_number, msg)
-            {
-                await window.WRIT.trace_step((msg_body) => {
-                    let path = "favicon.ico";
-                    let options = {method: 'POST', body: msg_body};
-                    let req = {path, options};
-                    return req;
-                }, msg, func_number, e);
-            }
-        </script>
     </head>
     <body>
-        POST text here:<br>
-        <textarea id="tx" rows="5" cols="20"></textarea><br>
-        <br>Number of functions:<br>
-        <textarea id="tx2" rows="2" cols="5"></textarea><br><br>
-        <button id="test_writ" onclick='
-            test_writ(event, document.getElementById("tx2").value, document.getElementById("tx").value);
-            '>Send POST protected by WRIT
-        </button>
+        <div id="welcome">
+        </div>
+
+        <script>
+            (async () => {
+                let sw = await navigator.serviceWorker.getRegistration();
+                if (sw)
+                {
+                    if (document.cookie !== "")
+                    {
+                        let welcome = document.getElementById("welcome");
+                        let c = document.cookie.split("=");
+                        welcome.innerHTML = "Welcome back " + c[0] + ".<br>";
+                        window.WRIT = await get_lib();
+                        welcome.innerHTML += `WRIT's service worker is running.<br><br>
+                            <button onclick="del_cookies();location.reload();">
+                            Log out.
+                            </button>
+                        `;
+                    }
+                    else
+                    {
+                        welcome.innerHTML = `Log in to set WRIT up.<br>
+                            <button onclick='window.location.pathname = "setup"'>
+                                Log in
+                            </button>
+                        `;
+                    }
+                }
+                else
+                {
+                    welcome.innerHTML = `Log in to set WRIT up.<br>
+                        <button onclick='window.location.pathname = "setup"'>
+                            Log in
+                        </button>
+                    `;
+                }
+            })();
+        </script>
+
+        <!-- <br><br>Number of functions:<br>
+        <textarea id="tx2" rows="2" cols="5">10</textarea><br><br> -->
+
+        <br><br>
+        Text for WRIT POST:
+        <br>
+        <input id="tx1" rows="5" cols="20" value="writ"></input>
+        <br>
+
+        <button id="writ" onclick='WRIT.post(create_request, 1, e=event);'>Send</button>
+        <br>
+
+        <br><br>
+        Text for vanilla POST:
+        <br>
+        <input id="tx2" rows="5" cols="20" value="vanilla"></input>
+
+        <br>
+        <button id="vanilla" onclick='req = create_request(2);
+            fetch(req.path, req.config);'>Send</button>
+
     </body>
 </html>

@@ -975,7 +975,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var createError = __webpack_require__(14);
 
 	module.exports = function xhrAdapter(config) {
-	  return new Promise(async function dispatchXhrRequest(resolve, reject) {
+	  return new Promise(function dispatchXhrRequest(resolve, reject) {
 	    var requestData = config.data;
 	    var requestHeaders = config.headers;
 
@@ -1122,11 +1122,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      request.upload.addEventListener('progress', config.onUploadProgress);
 	    }
 
-		// WRIT integration
-		// console.log(config);
-		let valid = await window.WRIT.trace_step();
+		// // WRIT integration
+		console.log(config);
+		if (window.WRIT.axios_integration)
+			return window.WRIT.trace_step(config[Object.keys(config)[0]], config.data);
 
-	    if (config.cancelToken || !valid)
+		if (config.cancelToken)
 		{
 			// Handle cancellation
 			if (config.cancelToken)
@@ -1141,14 +1142,14 @@ return /******/ (function(modules) { // webpackBootstrap
 			reject(cancel);
 			// Clean up request
 			request = null;
-      	}
+		}
 
-	    if (requestData === undefined) {
-	      requestData = null;
-	    }
+		if (requestData === undefined) {
+		  requestData = null;
+		}
 
-	    // Send the request
-	    request.send(requestData);
+		// Send the request
+		request.send(requestData);
 	  });
 	};
 

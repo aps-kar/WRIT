@@ -49,7 +49,7 @@ var lib_js = `(function lib_js()
         return trace;
     }
 
-    function new_gen_trace(rng_seed, protected, func_count)
+    function gen_trace(rng_seed, protected, func_count)
     {
         // use SW's seed to generate pseudorandom series of numbers
         let prng = new Math.seedrandom(rng_seed);
@@ -114,11 +114,8 @@ var lib_js = `(function lib_js()
         reg.unregister();
     }
 
-    async function trace_step(protected_func, args, func_count, e)
+    async function post(callback, args, e, funcs=10)
     {
-        if (!func_count)
-            func_count = 10;
-
         if (e && e.isTrusted === false)
         {
             // alert("Artificial event fired!");
@@ -126,30 +123,45 @@ var lib_js = `(function lib_js()
         }
 
         let protected = {};
-        if (protected_func)
+        if (callback)
         {
-            protected.func = protected_func;
+            protected.func = callback;
             protected.args = args;
         }
+        else
+            return new Error("No callback provided!");
 
-        let rng_seed = await _fetch("/rng_seed", {body: func_count.toString(), method: "POST"});
+        // get seed from SW
+        let rng_seed = await _fetch("/rng_seed", {body: funcs.toString(), method: "POST"});
         rng_seed = parseInt(rng_seed);
 
-        let ret = new_gen_trace(rng_seed, protected, func_count);
+        // generate the stack trace
+        let ret = gen_trace(rng_seed, protected, funcs);
 
-        let resp = await _fetch("/trace", {body: JSON.stringify(ret), method: "POST"});
-        let valid = parseInt(resp);  // 1 or 0
+        // send stack trace to SW
+        let resp = await fetch("/trace", {body: JSON.stringify(ret), method: "POST"});
 
-        return valid;
+        // return server's response to client/page
+        return resp;
     };
 
     // public methods
-    _obj.trace_step = async (protected_func, args, func_count, e) => await trace_step(protected_func, args, func_count, e);
+    _obj.post = async (callback, args, e, funcs) => await post(callback, args, e, funcs);
 
     return _obj;
 })()`;
 
 // utility functions
+function array_avg(array, wipe)
+{
+    let avg = array.reduce((a, b) => a + b, 0) / array.length;
+    if (wipe === 1)
+        sign_time = [];
+    else if (wipe === 2)
+        send_time = [];
+    return avg;
+}
+
 function buf2hex(buffer)
 {
     return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
@@ -183,12 +195,12 @@ self.addEventListener("activate", function(event)
 });
 
 // SW fetching/responding
-self.addEventListener("fetch", function(event)
+self.addEventListener("fetch", async function(event)
 {
     let req = event.request;
     let url = req.url;
 
-    if (url.includes("http://" + ip_addr) && (url.match(/\//g) || []).length === 3)
+    if (url.includes(ip_addr) && (url.match(/\//g) || []).length === 3)
     {
         let url_post = url.split("/");
         url_post = url_post[url_post.length-1]
@@ -243,50 +255,59 @@ self.addEventListener("fetch", function(event)
             }
             else if (url_post === "trace")
             {
-                event.respondWith(
-                    req.text().then((data) =>
-                    {
-                        let page_data = JSON.parse(data);
-                        let stack_trace = page_data.trace; // page's trace
-                        let layers = page_data.numbers; // raw numbers ("layers") on trace
-                        let request = JSON.stringify(page_data.request); // page's request
+                event.respondWith((async () => {
 
-                        let buf_base = (enc.encode(request)).buffer; // encode req and buffer-ize
+                    // unpack request data
+                    let data = await req.clone().text();
+                    let parsed = JSON.parse(data);
+                    let stack_trace = parsed.trace; // page's trace
+                    let layers = parsed.numbers; // raw numbers ("layers") on trace
+                    let request = JSON.stringify(parsed.request); // page's request
 
-                        return new Promise((resolve, reject) =>
-                        {
-                            hmac_prep() // prepare for signing
-                            .then((_key) => crypto.subtle.sign("HMAC", _key, buf_base)) // sign
-                            .then((sig) => { // signature available
-                                let valid = 1;
-                                if (sw_trace !== layers) // if numbers on trace dont match, abort
-                                {
-                                    valid = 0;
-                                    resolve(valid.toString()); // return "0" to page
-                                }
+                    // create SW signature
+                    let buf_base = (enc.encode(request)).buffer; // encode req and buffer-ize
+                    let crypto_key = await hmac_prep();
+                    let sig = await crypto.subtle.sign("HMAC", crypto_key, buf_base);
 
-                                // send page's request + signature to server
-                                let signature = buf2hex(sig);
-                                let package = JSON.stringify({"data": request, "signature": signature, "valid": valid});
-                                let args = {body: package, method: "POST", headers: {"Content-Type": "application/json"}};
-                                fetch("/sw_post", args);
+                    // check if numbers on trace match
+                    let valid = 1;
+                    if (sw_trace !== layers)
+                        valid = 0;
 
-                                resolve(valid.toString()); // return "1" to page
-                            });
-                        });
-                    })
-                    .then((verdict) =>
-                    {
-                        return new Response(verdict, {"status": 200});
-                    })
-                );
+                    // send page's request + signature to server
+                    let signature = buf2hex(sig);
+                    let package = JSON.stringify({"data": request, "signature": signature, "valid": valid});
+                    let args = {body: package, method: "POST", headers: {"Content-Type": "application/json"}};
+
+                    let resp = await fetch(req, args);
+
+                    // process server response if needed
+                    // ...
+
+                    // return server response to page
+                    return resp;
+                })());
             }
-       }
+        }
         else
         {
             // servicing requests from the network
             event.respondWith(
-                fetch(req) //, {credentials: "same-origin"})
+                (async () => {
+                    let resp;
+                    try {
+                        resp = await fetch(req);  //, {credentials: "same-origin"})
+                    }
+                    catch (err) {
+                        console.log(err);
+                    }
+                    finally {
+                        if (resp)
+                            return resp;
+                        else
+                            return new Response("not ok!", {"status": 400});
+                    }
+                })()
             );
         }
     }

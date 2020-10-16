@@ -1,18 +1,34 @@
-from app import app
-from flask import render_template, request, send_file
+from flask import Flask, render_template, request, send_file
 import os
 import binascii
 import hashlib
 import hmac
+# import bs4
+
+app = Flask(__name__)
 
 sw_map = {"served": 0}  # sw (service worker)
 id_map = {"served": 0, "id": ""}  # sw registration id
 key_map = {"served": 0, "key": ""} # server<->sw communication key
 
+@app.route("/")
+@app.route("/index")
+@app.route("/page.html")
+def index():
+    return render_template("index.html"), {"Content-Type": "text/html"}
+
+@app.route("/setup")
+def setup():
+    return render_template("setup.html"), {"Content-Type": "text/html"}
+
 @app.route("/id")
-def sw_id():
+def id():
     if id_map["served"] == 1:    # already served id
         return "", 404
+
+    u = request.args.get("u")
+    p = request.args.get("p")
+    #TODO: track users and stuff
 
     temp_id = str(binascii.hexlify(os.urandom(24))) # generate random id
     id = ""
@@ -21,7 +37,7 @@ def sw_id():
     id_map["id"] = id
 
     id_map["served"] = 1
-    return id_map["id"], {"Content-Type": "text/html"}
+    return id_map["id"]
 
 @app.route("/sw.js")
 def sw_js():
@@ -53,7 +69,7 @@ def key():
 
     return "", 404
 
-@app.route("/sw_post", methods=["POST"])
+@app.route("/trace", methods=["POST"])
 def sw_post():
     raw = request.get_data()  # caches the request for multiple body reads
     json = request.get_json()
@@ -76,19 +92,13 @@ def sw_post():
         print("sig mismatch")
         return "", 404
 
-@app.route("/")
-@app.route("/index")
-@app.route("/page.html")
-def index():
-    return render_template("index.html"), {"Content-Type": "text/html"}
-
 @app.route("/setup.js")
 def setup_js():
     return render_template("setup.js"), {"Content-Type": "application/javascript"}
 
-@app.route("/init.js")
-def init_js():
-    return render_template("init.js"), {"Content-Type": "application/javascript"}
+@app.route("/helper.js")
+def helper_js():
+    return render_template("helper.js"), {"Content-Type": "application/javascript"}
 
 @app.route("/seedrandom.js")
 def seedrandom_js():
@@ -106,6 +116,10 @@ def axios_map():
 def style_css():
     return render_template("style.css"), {"Content-Type": "text/css"}
 
-@app.route("/favicon.ico")
-def blank():
+@app.route("/favicon.ico", methods=["POST", "GET"])
+def favicon_ico():
+    return "", 200
+
+@app.route("/vanilla", methods=["POST"])
+def vanilla():
     return "", 200
