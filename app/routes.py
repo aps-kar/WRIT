@@ -1,21 +1,29 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request
 import os
 import binascii
 import hashlib
 import hmac
-# import bs4
+from pprint import pprint as pp
 
 app = Flask(__name__)
 
-sw_map = {"served": 0}  # sw (service worker)
-id_map = {"served": 0, "id": ""}  # sw registration id
-key_map = {"served": 0, "key": ""} # server<->sw communication key
+class User:
+    def __init__(self, uname, pword, id, key, sw):
+        self.uname = uname;
+        self.pword = pword;
+        self.id = id;
+        self.key = key;
+        self.sw = sw;
+
+users = {}
 
 @app.route("/")
 @app.route("/index")
 @app.route("/page.html")
 def index():
-    return render_template("index.html"), {"Content-Type": "text/html"}
+    token_id = str(binascii.hexlify(os.urandom(24))) # generate random token id
+    token_id = token_id[2:-1]
+    return render_template("index.html", tid=token_id), {"Content-Type": "text/html"}
 
 @app.route("/setup")
 def setup():
@@ -23,51 +31,41 @@ def setup():
 
 @app.route("/id")
 def id():
-    if id_map["served"] == 1:    # already served id
-        return "", 404
+    uname = request.args.get("u")
+    for usr in users:
+        if usr.uname == uname:  # already served id for this user
+            return "", 404
 
-    u = request.args.get("u")
-    p = request.args.get("p")
-    #TODO: track users and stuff
+    pword = request.args.get("p")
+    id = str(binascii.hexlify(os.urandom(24))) # generate random id
+    id = id[2:-1]
+    users[id] = User(uname, pword, id, "", 0)
 
-    temp_id = str(binascii.hexlify(os.urandom(24))) # generate random id
-    id = ""
-    for i in range(2, len(temp_id) - 1):
-        id = id + temp_id[i]
-    id_map["id"] = id
-
-    id_map["served"] = 1
-    return id_map["id"]
+    return id, {"Content-Type": "text/html"}
 
 @app.route("/sw.js")
 def sw_js():
-    req_id = request.args.get("id")
+    id = request.args.get("id")
 
-    if id_map["served"] == 0:   # id served
-        return "", 404
-    elif req_id != id_map["id"]:  # ids not matching
-        return "", 404
-    elif sw_map["served"] == 1:   # sw served
+    if id in users and users[id].sw == 0:
+        users[id].sw = 1;
+    else:
         return "", 404
 
-    sw_map["served"] = 1
     return render_template("sw.js"), {"Content-Type": "application/javascript"}
 
-@app.route('/key')
+@app.route('/key', methods=["POST"])
 def key():
-    req_id = request.args.get("id")
+    json = request.get_json()
+    id = json["id"]
+    if id in users and users[id].sw == 1 and users[id].key == "":
+        key = str(binascii.hexlify(os.urandom(24))) # generate random key
+        key = key[2:-1]
+        users[id].key = key
+    else:
+        return "", 404
 
-    if id_map["served"] == 1 and sw_map["served"] == 1 and req_id == id_map["id"]:
-        temp_key = str(binascii.hexlify(os.urandom(24))) # generate random key
-        key = ""
-        for i in range(2, len(temp_key) - 1):
-            key = key + temp_key[i]
-        key_map["key"] = key
-
-        key_map["served"] = 1
-        return key_map["key"], {"Content-Type": "text/html"}
-
-    return "", 404
+    return key, {"Content-Type": "text/html"}
 
 @app.route("/trace", methods=["POST"])
 def sw_post():
@@ -75,10 +73,10 @@ def sw_post():
     json = request.get_json()
     page_request = json["data"]
     sw_sig = json["signature"]
-
+    id = json["id"]
     layers_valid = int(json["valid"])
     enc_request = bytearray(str(page_request), encoding="utf-8") # enc request
-    enc_key = bytearray(key_map["key"], encoding="utf-8")  # enc key
+    enc_key = bytearray(users[id].key, encoding="utf-8")  # enc key
     # generate signature
     server_sig = hmac.new(enc_key, msg=enc_request, digestmod=hashlib.sha512).hexdigest()
 
@@ -100,10 +98,6 @@ def setup_js():
 def helper_js():
     return render_template("helper.js"), {"Content-Type": "application/javascript"}
 
-@app.route("/seedrandom.js")
-def seedrandom_js():
-    return render_template("seedrandom.js"), {"Content-Type": "application/javascript"}
-
 @app.route("/axios.js")
 def axios_js():
     return render_template("axios.js"), {"Content-Type": "application/javascript"}
@@ -123,3 +117,21 @@ def favicon_ico():
 @app.route("/vanilla", methods=["POST"])
 def vanilla():
     return "", 200
+
+@app.route("/jsOTP.min.js")
+def jsOTP_min_js():
+    return render_template("jsOTP.min.js"), {"Content-Type": "application/javascript"}
+
+@app.route("/base32.min.js")
+def base32_min_js():
+    return render_template("base32.min.js"), {"Content-Type": "application/javascript"}
+
+# @app.route("/sw_ad.js")
+# def sw_ad_js():
+#     # return render_template("sw_ad.js"), {"Content-Type": "application/javascript"}
+#     return "", 404
+
+# @app.route("/bg")
+# @app.route("/cs")
+# def extest():
+#     return "ok", 200

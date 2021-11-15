@@ -1,7 +1,24 @@
 <html>
     <head>
+        <script src="helper.js"></script>
+        <script>
+            (async () => {
+                async function get_lib() {
+                    if (window.WRIT)    // public object up? unlikely at this point
+                        return window.WRIT;
+                    if (await navigator.serviceWorker.getRegistration()) // SW installed?
+                    {
+                        let config = {method: "POST", body: "{{tid}}"};
+                        let lib_string = await _fetch("/lib.js", config); // get WRIT library from SW
+                        return eval(lib_string);
+                    }
+                    return null;
+                }
+                window.WRIT = await get_lib();
+            })();
+        </script>
+
         <link rel="stylesheet" href="style.css">
-        <script src="seedrandom.js"></script>
         <script src="axios.js"></script>
         <script src="setup.js"></script>
     </head>
@@ -19,7 +36,6 @@
                         let welcome = document.getElementById("welcome");
                         let c = document.cookie.split("=");
                         welcome.innerHTML = "Welcome back " + c[0] + ".<br>";
-                        window.WRIT = await get_lib();
                         welcome.innerHTML += `WRIT's service worker is running.<br><br>
                             <button onclick="del_cookies();location.reload();">
                             Log out.
@@ -46,26 +62,68 @@
             })();
         </script>
 
-        <!-- <br><br>Number of functions:<br>
-        <textarea id="tx2" rows="2" cols="5">10</textarea><br><br> -->
-
         <br><br>
         Text for WRIT POST:
         <br>
-        <input id="tx1" rows="5" cols="20" value="writ"></input>
+        req payload:<input type="text" id="tx1" size="10" value="test"></input>
+        funcs:<input type="text" id="funcs" size="10" value="10"></input>
+        runs:<input type="text" id="runs" size="10" value="100"></input>
         <br>
 
-        <button id="writ" onclick='WRIT.post(create_request, 1, e=event);'>Send</button>
+        <button id="writ" onclick='WRIT.post(create_request, 1, e=event,
+                                    document.getElementById("funcs").value);'>send single</button>
+        <br>
+        <button id="test_writ" onclick='test_writ(event, document.getElementById("runs").value,
+                                        document.getElementById("funcs").value)'>test writ</button>
         <br>
 
         <br><br>
         Text for vanilla POST:
         <br>
-        <input id="tx2" rows="5" cols="20" value="vanilla"></input>
-
+        req payload:<input type="text"  id="tx2" size="10" value="test"></input>
+        runs:<input type="text" id="vruns" size="10" value="100"></input>
         <br>
         <button id="vanilla" onclick='req = create_request(2);
-            fetch(req.path, req.config);'>Send</button>
+            fetch(req.path, req.config);'>send single</button>
+        <br>
+        <button id="test_vanilla" onclick='test_vanilla(document.getElementById("vruns").value)'>test vanilla</button>
+
+
+        <br><br><br>
+        Simple OTP demo:
+        <br>
+        <button id="get_otp" onclick='(async () => {
+            let res = await fetch("/get_otp");
+            if (!res.ok)
+            {
+                document.getElementById("tx3").value = "No SW";
+                return;
+            }
+            let otp = await res.text();
+            document.getElementById("tx3").value = otp;
+        })();'
+        >Get OTP:</button>
+        <input type="text" id="tx3" size="5" value=""></input>
+
+        <br>
+        <button id="check_otp" onclick='(async () => {
+            let res = await fetch("/check_otp",
+                {body: document.getElementById("tx3").value.toString(),
+                 method: "POST"});
+            if (!res.ok)
+            {
+                document.getElementById("tx4").value = "No SW";
+                return;
+            }
+            let status = await res.text();
+            let tx4 = document.getElementById("tx4")
+            if (status === "1")
+                tx4.value = "OK";
+            else
+                tx4.value = "EXPIRED";
+        })();'
+        >Check OTP:</button>
+        <input type="text" id="tx4" size="5" value=""></input>
 
     </body>
 </html>

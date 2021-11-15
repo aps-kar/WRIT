@@ -77,7 +77,9 @@ async function setup(u, p) // execute setup phase
     {
         await sw_activation();  // wait for sw to activate
         // give id to sw
-        await _fetch("/key?id=" + id);
+        let config = {method: "POST", body: JSON.stringify({"id": id}),
+                    headers: {"Content-Type": "application/json"}};
+        await _fetch("/key", config);
     }
 
     // setup phase failed
@@ -100,7 +102,7 @@ async function get_lib()
         let lib_string = await _fetch("/lib.js");  // get WRIT's lib from sw
         let lib_js = eval(lib_string); // eval the string to get JS
 
-        // alternative that doesn't use eval (we need eval for Safari)
+        // alternative that doesn't use eval (needed for Safari)
         // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
 
         return lib_js;
@@ -135,6 +137,6 @@ async function init(u, p) // WRIT initialization
     if (!sw) // if it doesn't, install it first
         await setup(u, p);
 
-    let lib = await get_lib();
-    return lib;
+    // let lib = await get_lib();
+    // return lib;
 }
