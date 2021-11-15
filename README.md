@@ -30,7 +30,7 @@ WRIT combines JavaScript closures and Service Workers to create an isolated trus
 
 ### Operation Overview
 
-![Operation Overview](paper/figs/approach.jpg)
+![Operation Overview](figs/approach.jpg)
 
 WRIT generates a separate in-page script at each user session, which contains a unique hard-coded identifier. This identifier is used to establish a communication channel, where the exchanged messages can be securely authenticated. Every time the user performs an action, WRIT’s in-page component uses a secret token to request a random seed from the Service Worker. The seed is used to randomize the event handling function's stack trace, which can be verified by the Service Worker using the exact same seed; if the verification succeeds, the Service Worker signs the corresponding request using a pre-established key and forwards it to the back-end web server.
 
