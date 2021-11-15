@@ -71,10 +71,10 @@
         <br>
 
         <button id="writ" onclick='WRIT.post(create_request, 1, e=event,
-                                    document.getElementById("funcs").value);'>send single</button>
+                                    document.getElementById("funcs").value);'>send single request through writ</button>
         <br>
         <button id="test_writ" onclick='test_writ(event, document.getElementById("runs").value,
-                                        document.getElementById("funcs").value)'>test writ</button>
+                                        document.getElementById("funcs").value)'>writ timed test</button>
         <br>
 
         <br><br>
@@ -84,13 +84,13 @@
         runs:<input type="text" id="vruns" size="10" value="100"></input>
         <br>
         <button id="vanilla" onclick='req = create_request(2);
-            fetch(req.path, req.config);'>send single</button>
+            fetch(req.path, req.config);'>send single vanilla request</button>
         <br>
-        <button id="test_vanilla" onclick='test_vanilla(document.getElementById("vruns").value)'>test vanilla</button>
+        <button id="test_vanilla" onclick='test_vanilla(document.getElementById("vruns").value)'>vanilla timed test</button>
 
 
         <br><br><br>
-        Simple OTP demo:
+        Simple 2FA demo, using SW to generate OTPs:
         <br>
         <button id="get_otp" onclick='(async () => {
             let res = await fetch("/get_otp");

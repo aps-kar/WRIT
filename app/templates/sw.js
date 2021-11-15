@@ -60,7 +60,7 @@ var lib_js = `(function lib_js()
         return trace;
     }
 
-    function old_gen_trace(rng_seed, protected, func_count)
+    function gen_trace(rng_seed, protected, func_count)
     {
         // use SW's seed to generate pseudorandom series of numbers
         let prng = new Math.seedrandom(rng_seed);
@@ -119,47 +119,6 @@ var lib_js = `(function lib_js()
         return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
     }
 
-    async function gen_trace(rng_seed, protected)
-    {
-        // hook original function, force trace in it
-        if (protected)
-        {
-            let original = protected.func;
-            protected.func = () =>
-            {
-                // get the trace now
-                let trace = stack_trace();
-                // run the page's function
-                let request = original(protected.args);
-                // get trace out so it can be passed to SW
-                return {trace, request};
-            }
-            Object.defineProperty(protected.func, "name", {value: original.name, writable: false});
-        }
-
-        let trace;
-        let package = {};
-        if (protected)
-        {
-            trace = protected.func();
-            package.trace = trace.trace;
-        }
-        else
-        {
-            trace = stack_trace();
-            package.trace = trace;
-        }
-        package.seed = rng_seed;
-
-        let enc = new TextEncoder();
-        let pac = JSON.stringify(package);
-        let buf = enc.encode(pac).buffer;
-        let hash = await crypto.subtle.digest("SHA-256", buf);
-        package.hash = buf2hex(hash);
-
-        return package;
-    }
-
     function sleep(ms)
     {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -197,20 +156,12 @@ var lib_js = `(function lib_js()
         if (window.seed_time) window.seed_time.push(end-start);
         rng_seed = parseInt(rng_seed);
 
-        // OLD
         // generate the stack trace
         start = performance.now();
-        let ret = old_gen_trace(rng_seed, protected, funcs);
+        let ret = gen_trace(rng_seed, protected, funcs);
         end = performance.now();
         if (window.gen_time) window.gen_time.push(end-start);
         let resp = await fetch("/trace", {body: JSON.stringify({tid, ret}), method: "POST"});
-
-        // NEW
-        // start = performance.now();
-        // let package = await gen_trace(rng_seed, protected);
-        // end = performance.now();
-        // window.gen_time.push(end-start);
-        // let resp = await fetch("/trace", {body: JSON.stringify(package), method: "POST"});
 
         // return server's response to client/page
         return resp;
@@ -267,17 +218,12 @@ self.addEventListener("activate", function(event)
     self.clients.claim();
 });
 
-// self.addEventListener("fetch", async function(event)
-// {
-//     console.log("second listener");
-// });
-
 // SW fetching/responding
 self.addEventListener("fetch", async function(event)
 {
     let req = event.request;
     let url = req.url;
-    console.log("I spy with my little eye: " + url);
+    // console.log("I spy: " + url);
 
     if (url.includes(ip_addr) && (url.match(/\//g) || []).length === 3)
     {
@@ -315,7 +261,7 @@ self.addEventListener("fetch", async function(event)
                     let key_bytes = hex2bytes(key);
                     let secret = root.base32.encode(key_bytes);
                     let tcode = totp.getOtp(secret);
-                    console.log("tcode =" + tcode);
+                    // console.log("tcode =" + tcode);
                     return new Response(tcode, {"status": 200})
                 })());
             }
@@ -323,12 +269,12 @@ self.addEventListener("fetch", async function(event)
             {
                 event.respondWith((async () => {
                     let page_otp = await req.text();
-                    console.log("page_otp = " + page_otp);
+                    // console.log("page_otp = " + page_otp);
                     let totp = new jsOTP.totp(5);
                     let key_bytes = hex2bytes(key);
                     let secret = root.base32.encode(key_bytes);
                     let tcode = totp.getOtp(secret);
-                    console.log("tcode =" + tcode);
+                    // console.log("tcode =" + tcode);
                     if (tcode === page_otp)
                         return new Response("1");
                     else
@@ -388,7 +334,7 @@ self.addEventListener("fetch", async function(event)
                     let _req = req.clone();
                     let data = await _req.text();
                     let parsed = JSON.parse(data);
-                    console.log(parsed);
+                    // console.log(parsed);
                     if (parsed.tid !== tid)
                         return new Response("wrong tid", {"status": 404});
                     let page_trace = parsed.ret.trace; // page's trace
@@ -405,46 +351,19 @@ self.addEventListener("fetch", async function(event)
                     if (sw_trace !== layers)
                         valid = 0;
 
-                    // NEW
-                    // unpack request data
-                    // let data = await req.clone().text();
-                    // let parsed = JSON.parse(data);
-                    // let page_trace = parsed.trace;
-                    // let page_seed = parsed.seed;
-                    // let page_hash = parsed.hash;
-
-                    // create SW signature
-                    // let buf_base = enc.encode(page_trace).buffer; // encode req and buffer-ize
-                    // let crypto_key = await hmac_prep();
-                    // let sig = await crypto.subtle.sign("HMAC", crypto_key, buf_base);
-
-                    // verify trace hash
-                    // let hash_package = {};
-                    // hash_package.trace = page_trace;
-                    // hash_package.seed = seed;
-                    // let pac = JSON.stringify(hash_package);
-                    // let pac_buf = enc.encode(pac).buffer;
-                    // let sw_hash = await crypto.subtle.digest("SHA-256", pac_buf);
-                    // sw_hash = buf2hex(sw_hash);
-
-                    // check if numbers on trace match
-                    // let valid = 1;
-                    // if (sw_hash !== page_hash)
-                    //     valid = 0;
-
                     // send page's request + signature to server
                     let signature = buf2hex(sig);
                     let package = JSON.stringify({"data": page_trace,
                         "signature": signature, "valid": valid,
                         "request": parsed.request, "id": id});
-                    console.log("Package Size: " + new Blob([package]).size);
+                    // console.log("Package Size: " + new Blob([package]).size);
                     let args = {body: package, method: "POST",
                         headers: {"Content-Type": "application/json"}};
                     let trace_req = new Request("/trace", args);
                     let end = performance.now();
                     prep_time = end-start;
 
-                    console.log(trace_req);
+                    // console.log(trace_req);
                     start = performance.now();
                     let resp = await fetch(trace_req);
                     end = performance.now();

@@ -100,10 +100,17 @@ async function get_lib()
     if (!window.WRIT)   // if WRIT isn't installed yet
     {
         let lib_string = await _fetch("/lib.js");  // get WRIT's lib from sw
-        let lib_js = eval(lib_string); // eval the string to get JS
-
-        // alternative that doesn't use eval (needed for Safari)
-        // let lib_js = (new Function("return " + await _fetch("/lib.js")))();
+        let lib_js;
+        // try {
+            // lib_js = eval(lib_string); // eval the string to get JS
+        // }
+        // catch (err) {
+            // console.log(err);
+        // }
+        // finally {
+            // alternative that doesn't use eval (sometimes needed for Safari and Opera)
+            lib_js = (new Function("return " + lib_string))();
+        // }
 
         return lib_js;
     }
